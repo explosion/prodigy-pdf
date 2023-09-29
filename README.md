@@ -16,5 +16,5 @@ This recipe turns pdfs into images so that they may be annotated using the famil
 #### Usage:
 
 ```
-python -m prodigy pdf.image.manual papers tests/pdfs --labels title,text,figure -F prodigy_pdf/__init__.py
+prodigy pdf.image.manual papers tests/pdfs --labels title,text,figure
 ```
