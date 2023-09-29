@@ -4,6 +4,8 @@ A Prodigy plugin for PDF annotation
 
 ### `pdf.image.manual`
 
+![](images/pdf_image_manual.png)
+
 Usage:
 
 ```
