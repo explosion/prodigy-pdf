@@ -9,7 +9,6 @@ from prodigy import recipe, set_hashes, ControllerComponentsDict
 from prodigy.components.stream import Stream
 from prodigy.util import msg
 
-
 def page_to_image(page: pdfium.PdfPage) -> str:
     pil_image = page.render().to_pil()
     buffered = BytesIO()
