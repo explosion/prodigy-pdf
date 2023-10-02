@@ -25,8 +25,10 @@ def generate_pdf_pages(pdf_paths: List[Path]) -> Dict:
             page = pdf.get_page(page_number)
             yield set_hashes({
                 "image": page_to_image(page), 
-                "pdf": pdf_path.parts[-1],
-                "page": page_number
+                "meta": {
+                    "page": page_number,
+                    "pdf": pdf_path.parts[-1],
+                }
             })
 
 
