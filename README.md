@@ -1,20 +1,19 @@
-# prodigy-pdf
+<a href="https://explosion.ai"><img src="https://explosion.ai/assets/img/logo.svg" width="125" height="125" align="right" /></a>
 
-A Prodigy plugin for PDF annotation
+# 📄 Prodigy-PDF
 
-## `pdf.image.manual`
+This repository contains a Prodigy plugin for recipes that annotating PDF files. At the moment it features a recipe that can turn the PDF into an image, which can then be annotated using the familiar `image_manual` interface.
 
-This recipe turns pdfs into images so that they may be annotated using the familiar [image_manual](https://prodi.gy/docs/recipes#image-manual) interface. 
+<figure>
+  <img src="images/pdf_image_manual.png" width="50%" style="margin-left: auto;margin-right: auto;">
+  <figcaption>This is what the `pdf.image.manual` recipe looks like.</figcaption>
+</figure>
 
-<details>
-    <summary>UI Preview</summary>
-    
-![](images/pdf_image_manual.png)
 
-</details>
-
-#### Usage:
+You can install this plugin via `pip`. 
 
 ```
-prodigy pdf.image.manual papers tests/pdfs --labels title,text,figure
+pip install "prodigy-pdf @ git+https://github.com/explosion/prodigy-pdf"
 ```
+
+To learn more about this plugin, you can check the [Prodigy docs]().
