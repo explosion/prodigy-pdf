@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import List
 import base64
 from io import BytesIO
 from pathlib import Path
@@ -10,6 +10,7 @@ from prodigy.components.stream import Stream
 from prodigy.util import msg
 
 def page_to_image(page: pdfium.PdfPage) -> str:
+    """Turns a PdfPage into a base64 image for Prodigy"""
     pil_image = page.render().to_pil()
     with BytesIO() as buffered:
         pil_image.save(buffered, format="JPEG")
@@ -17,7 +18,8 @@ def page_to_image(page: pdfium.PdfPage) -> str:
     return f"data:image/png;base64,{img_str.decode('utf-8')}"
 
 
-def generate_pdf_pages(pdf_paths: List[Path]) -> Dict:
+def generate_pdf_pages(pdf_paths: List[Path]):
+    """Generate dictionaries that contain an image for each page in the PDF"""
     for pdf_path in pdf_paths:
         pdf = pdfium.PdfDocument(pdf_path)
         n_pages = len(pdf)
