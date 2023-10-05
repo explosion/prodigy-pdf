@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import List
 import base64
 from io import BytesIO
 from pathlib import Path
@@ -10,14 +10,16 @@ from prodigy.components.stream import Stream
 from prodigy.util import msg
 
 def page_to_image(page: pdfium.PdfPage) -> str:
+    """Turns a PdfPage into a base64 image for Prodigy"""
     pil_image = page.render().to_pil()
-    buffered = BytesIO()
-    pil_image.save(buffered, format="JPEG")
-    img_str = base64.b64encode(buffered.getvalue())
+    with BytesIO() as buffered:
+        pil_image.save(buffered, format="JPEG")
+        img_str = base64.b64encode(buffered.getvalue())
     return f"data:image/png;base64,{img_str.decode('utf-8')}"
 
 
-def generate_pdf_pages(pdf_paths: List[Path]) -> Dict:
+def generate_pdf_pages(pdf_paths: List[Path]):
+    """Generate dictionaries that contain an image for each page in the PDF"""
     for pdf_path in pdf_paths:
         pdf = pdfium.PdfDocument(pdf_path)
         n_pages = len(pdf)
@@ -30,6 +32,7 @@ def generate_pdf_pages(pdf_paths: List[Path]) -> Dict:
                     "pdf": pdf_path.parts[-1],
                 }
             })
+        pdf.close()
 
 
 @recipe(
@@ -47,6 +50,7 @@ def pdf_image_manual(
     labels:str,
     remove_base64:bool=False
 ) -> ControllerComponentsDict:
+    """Turns pdfs into images in order to annotate them."""
     # Read in stream as a list for progress bar.
     if not pdf_folder.exists():
         msg.fail(f"Folder `{pdf_folder}` does not exist.", exits=True)
