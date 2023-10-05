@@ -11,9 +11,9 @@ from prodigy.util import msg
 
 def page_to_image(page: pdfium.PdfPage) -> str:
     pil_image = page.render().to_pil()
-    buffered = BytesIO()
-    pil_image.save(buffered, format="JPEG")
-    img_str = base64.b64encode(buffered.getvalue())
+    with BytesIO() as buffered:
+        pil_image.save(buffered, format="JPEG")
+        img_str = base64.b64encode(buffered.getvalue())
     return f"data:image/png;base64,{img_str.decode('utf-8')}"
 
 
