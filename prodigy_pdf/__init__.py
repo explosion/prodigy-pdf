@@ -34,6 +34,7 @@ def generate_pdf_pages(pdf_paths: List[Path]):
                     "pdf": pdf_path.parts[-1],
                 }
             })
+        pdf.close()
 
 
 @recipe(
