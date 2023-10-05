@@ -47,6 +47,7 @@ def pdf_image_manual(
     labels:str,
     remove_base64:bool=False
 ) -> ControllerComponentsDict:
+    """Turns pdfs into images in order to annotate them."""
     # Read in stream as a list for progress bar.
     if not pdf_folder.exists():
         msg.fail(f"Folder `{pdf_folder}` does not exist.", exits=True)
