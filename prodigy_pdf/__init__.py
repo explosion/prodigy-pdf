@@ -98,6 +98,17 @@ def page_to_cropped_image(pil_page, span, scale):
     return cropped, f"data:image/png;base64,{img_str.decode('utf-8')}"
 
 
+def fold_ocr_dashes(ocr_input):
+    new = ""
+    for line in ocr_input.split("\n"):
+        if line.rfind("-") == -1:
+            newline = line + " "
+        else:
+            newline = line[:line.rfind("-")]
+        new += newline
+    return new
+
+
 @recipe(
     "pdf.ocr.correct",
     # fmt: off
@@ -106,6 +117,7 @@ def page_to_cropped_image(pil_page, span, scale):
     labels=("Labels to consider", "option", "l", str),
     scale=("Zoom for higher resolution for OCR algorithm", "option", "s", int),
     remove_base64=("Remove base64-encoded image data", "flag", "R", bool),
+    fold_dashes=("Removes dashes at the end of a textline and folds them with the next term.", "flag", "f", bool),
     autofocus=("Autofocus on the transcript UI", "flag", "af", bool)
     # fmt: on
 )
@@ -115,6 +127,7 @@ def pdf_ocr_correct(
     labels: str,
     scale: int = 3,
     remove_base64:bool=False,
+    fold_dashes:bool = False,
     autofocus: bool = False
 ) -> ControllerComponentsDict:
     """Applies OCR to annotated segments and gives a textbox for corrections."""
@@ -134,6 +147,8 @@ def pdf_ocr_correct(
                 cropped, img_str = page_to_cropped_image(pil_page, span=annot, scale=scale)
                 annot["image"] = img_str
                 annot["text"] = pytesseract.image_to_string(cropped)
+                if fold_dashes:
+                    annot["text"] = fold_ocr_dashes(annot["text"])
                 annot["transcription"] = annot["text"]
                 text_input_fields = {
                     "field_rows": 12,
