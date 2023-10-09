@@ -30,6 +30,7 @@ def generate_pdf_pages(pdf_paths: List[Path]):
                 "meta": {
                     "page": page_number,
                     "pdf": pdf_path.parts[-1],
+                    "path": str(pdf_path)
                 }
             })
         pdf.close()
