@@ -78,7 +78,7 @@ def pdf_image_manual(
         "view_id": "image_manual",
         "config": {
             "labels": labels.split(","),
-            "image_manual_stroke_width": 2,
+            "image_manual_stroke_width": 1,
             "custom_theme": {
                 "labels": {
                     lab: color[i] for i, lab in enumerate(labels.split(","))
@@ -100,6 +100,11 @@ def page_to_cropped_image(pil_page: Image, span: Dict, scale: int):
 
 
 def fold_ocr_dashes(ocr_input:str) -> str:
+    """
+    OCR might literally add dashes at the end of the line to indicate
+    continuation of the word. This can be fine in some cases, but this
+    function can fold it all into a single string. 
+    """
     new = ""
     for line in ocr_input.split("\n"):
         if line.rfind("-") == -1:
