@@ -10,6 +10,7 @@ from prodigy import recipe, set_hashes, ControllerComponentsDict
 from prodigy.components.stream import Stream, get_stream
 from prodigy.util import msg
 
+
 def page_to_image(page: pdfium.PdfPage) -> str:
     """Turns a PdfPage into a base64 image for Prodigy"""
     pil_image = page.render().to_pil()
