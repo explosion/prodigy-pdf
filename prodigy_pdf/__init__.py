@@ -1,7 +1,8 @@
-from typing import List
+from typing import List, Dict
 import base64
 from io import BytesIO
 from pathlib import Path
+from PIL import Image
 
 import pypdfium2 as pdfium
 
@@ -87,7 +88,7 @@ def pdf_image_manual(
     }
 
 
-def page_to_cropped_image(pil_page, span, scale):
+def page_to_cropped_image(pil_page: Image, span: Dict, scale: int):
     left, upper = span['x'], span['y']
     right, lower = left + span['width'], upper + span['height']
     scaled = (left * scale, upper * scale, right * scale, lower * scale)
@@ -98,7 +99,7 @@ def page_to_cropped_image(pil_page, span, scale):
     return cropped, f"data:image/png;base64,{img_str.decode('utf-8')}"
 
 
-def fold_ocr_dashes(ocr_input):
+def fold_ocr_dashes(ocr_input:str) -> str:
     new = ""
     for line in ocr_input.split("\n"):
         if line.rfind("-") == -1:
