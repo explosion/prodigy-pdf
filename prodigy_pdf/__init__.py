@@ -108,12 +108,13 @@ def fold_ocr_dashes(ocr_input:str) -> str:
     """
     new = ""
     for line in ocr_input.split("\n"):
+        line = line.strip()
         if line.rfind("-") == -1:
             newline = line + " "
         else:
             newline = line[:line.rfind("-")]
         new += newline
-    return new
+    return new.strip()
 
 
 @recipe(
