@@ -69,9 +69,9 @@ def pdf_image_manual(
                 del eg["image"]
         return examples
 
-    color = ["#ffff00", "#00ffff", "#ff00ff", "#00ff7f", "#ff6347", "#00bfff",
+    color = ["#00ffff", "#ff00ff", "#00ff7f", "#ff6347", "#00bfff",
              "#ffa500", "#ff69b4", "#7fffd4", "#ffd700", "#ffdab9", "#adff2f", 
-             "#d2b48c", "#dcdcdc"]
+             "#d2b48c", "#dcdcdc", "#ffff00", ]
 
     return {
         "dataset": dataset,
@@ -80,7 +80,7 @@ def pdf_image_manual(
         "view_id": "image_manual",
         "config": {
             "labels": labels.split(","),
-            "image_manual_stroke_width": 1,
+            "image_manual_stroke_width": 2,
             "custom_theme": {
                 "labels": {
                     lab: color[i] for i, lab in enumerate(labels.split(","))

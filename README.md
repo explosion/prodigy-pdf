@@ -15,6 +15,16 @@ You can install this plugin via `pip`.
 pip install "prodigy-pdf @ git+https://github.com/explosion/prodigy-pdf"
 ```
 
+If you want to use the OCR recipes, you'll also want to ensure that tesseract is installed. 
+
+```bash
+# for mac 
+brew install tesseract
+
+# for ubuntu
+sudo apt install tesseract-ocr
+```
+
 To learn more about this plugin, you can check the [Prodigy docs](https://prodi.gy/docs/plugins/#pdf).
 
 ## Issues? 
