@@ -4,6 +4,7 @@ from io import BytesIO
 from pathlib import Path
 from PIL import Image
 
+import pytesseract
 import pypdfium2 as pdfium
 
 from prodigy import recipe, set_hashes, ControllerComponentsDict
@@ -123,7 +124,7 @@ def fold_ocr_dashes(ocr_input:str) -> str:
     dataset=("Dataset to save answers to", "positional", None, str),
     source=("Source with PDF Annotations", "positional", None, str),
     labels=("Labels to consider", "option", "l", str),
-    scale=("Zoom for higher resolution for OCR algorithm", "option", "s", int),
+    scale=("Zoom scale. Increase above 3 to upscale the image for OCR.", "option", "s", int),
     remove_base64=("Remove base64-encoded image data", "flag", "R", bool),
     fold_dashes=("Removes dashes at the end of a textline and folds them with the next term.", "flag", "f", bool),
     autofocus=("Autofocus on the transcript UI", "flag", "af", bool)
@@ -139,8 +140,6 @@ def pdf_ocr_correct(
     autofocus: bool = False
 ) -> ControllerComponentsDict:
     """Applies OCR to annotated segments and gives a textbox for corrections."""
-    import pytesseract
-
     stream = get_stream(source)
     labels = labels.split(",")
 
@@ -148,6 +147,12 @@ def pdf_ocr_correct(
         for ex in stream:
             useful_spans = [span for span in ex['spans'] if span['label'] in labels]
             if useful_spans:
+                if 'meta' not in ex:
+                    raise ValueError(f"It seems the `meta` key is missing from an example: {ex}. Did you annotate this data with `pdf.image.manual`?")
+                if 'path' not in ex['meta']:
+                    raise ValueError(f"It seems the `path` key is missing from an example metadata: {ex}. Did you annotate this data with `pdf.image.manual`?")
+                if 'page' not in ex['meta']:
+                    raise ValueError(f"It seems the `page` key is missing from an example metadata: {ex}. Did you annotate this data with `pdf.image.manual`?")
                 pdf = pdfium.PdfDocument(ex['meta']['path'])
                 page = pdf.get_page(ex['meta']['page'])
                 pil_page = page.render(scale=scale).to_pil()
