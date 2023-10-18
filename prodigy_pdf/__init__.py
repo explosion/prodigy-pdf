@@ -8,7 +8,7 @@ import pytesseract
 import pypdfium2 as pdfium
 
 from prodigy import recipe, set_hashes, ControllerComponentsDict
-from prodigy.components.stream import Stream, get_stream
+from prodigy.components.stream import Stream
 from prodigy.util import msg
 
 
