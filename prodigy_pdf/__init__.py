@@ -118,6 +118,15 @@ def fold_ocr_dashes(ocr_input:str) -> str:
     return new.strip()
 
 
+def _validate_ocr_example(ex: Dict):
+    if 'meta' not in ex:
+        raise ValueError(f"It seems the `meta` key is missing from an example: {ex}. Did you annotate this data with `pdf.image.manual`?")
+    if 'path' not in ex['meta']:
+        raise ValueError(f"It seems the `path` key is missing from an example metadata: {ex}. Did you annotate this data with `pdf.image.manual`?")
+    if 'page' not in ex['meta']:
+        raise ValueError(f"It seems the `page` key is missing from an example metadata: {ex}. Did you annotate this data with `pdf.image.manual`?")
+
+
 @recipe(
     "pdf.ocr.correct",
     # fmt: off
@@ -147,12 +156,7 @@ def pdf_ocr_correct(
         for ex in stream:
             useful_spans = [span for span in ex['spans'] if span['label'] in labels]
             if useful_spans:
-                if 'meta' not in ex:
-                    raise ValueError(f"It seems the `meta` key is missing from an example: {ex}. Did you annotate this data with `pdf.image.manual`?")
-                if 'path' not in ex['meta']:
-                    raise ValueError(f"It seems the `path` key is missing from an example metadata: {ex}. Did you annotate this data with `pdf.image.manual`?")
-                if 'page' not in ex['meta']:
-                    raise ValueError(f"It seems the `page` key is missing from an example metadata: {ex}. Did you annotate this data with `pdf.image.manual`?")
+                _validate_ocr_example(ex)
                 pdf = pdfium.PdfDocument(ex['meta']['path'])
                 page = pdf.get_page(ex['meta']['page'])
                 pil_page = page.render(scale=scale).to_pil()
