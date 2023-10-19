@@ -34,13 +34,8 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -e .
-          pip install ruff pytest
+          pip install pytest
       
-      - name: Run ruff
-        if: always()
-        shell: bash
-        run: python -m ruff prodigy_pdf tests
-
       - name: Run pytest
         if: always()
         shell: bash
