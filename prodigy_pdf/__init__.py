@@ -42,7 +42,7 @@ def generate_pdf_pages(pdf_paths: List[Path]):
     "pdf.image.manual",
     # fmt: off
     dataset=("Dataset to save answers to", "positional", None, str),
-    pdf_folder=("Folder with PDFs to annotate", "positional", None, str),
+    pdf_folder=("Folder with PDFs to annotate", "positional", None, Path),
     labels=("Comma seperated labels to use", "option", "l", str),
     remove_base64=("Remove base64-encoded image data", "flag", "R", bool)
     # fmt: on
