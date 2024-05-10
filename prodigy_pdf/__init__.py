@@ -166,6 +166,12 @@ def pdf_ocr_correct(
                 if fold_dashes:
                     annot["text"] = fold_ocr_dashes(annot["text"])
                 annot["transcription"] = annot["text"]
+                
+                # passing through metadata, in order to connect OCR text & bounding boxes to the pdf images via path
+                # example usecase, finetuning a layoutLM on custom data
+                # see details here https://support.prodi.gy/t/pdf-ocr-image-annotation-metadata-feature-suggestion/7211
+                annot["meta"] = ex["meta"]
+                
                 text_input_fields = {
                     "field_rows": 12,
                     "field_label": "Transcript",
