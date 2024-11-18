@@ -1,14 +1,15 @@
 from pathlib import Path
-from prodigy_pdf import generate_pdf_pages, fold_ocr_dashes, pdf_image_manual
+
+from prodigy_pdf import fold_ocr_dashes, generate_pdf_pages, pdf_image_manual
 
 
 def test_generate_pdf_pages():
     # We know this one PDF has six pages.
     paths = Path("tests/pdfs").glob("*.pdf")
-    pages = list(generate_pdf_pages(paths))
+    pages = list(generate_pdf_pages(paths, split_pages=True))
     assert len(pages) == 6
     for page in pages:
-        assert "data" in page['image']
+        assert "data" in page["image"]
 
 
 def test_fold_dashes():
