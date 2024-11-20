@@ -129,7 +129,7 @@ class LayoutStream:
             for path in sorted(dir_path.iterdir())
             if path.is_file()
             and not path.name.startswith(".")
-            and (path.suffix.lower() in file_ext)
+            and (path.suffix.lower()[1:] in file_ext)
         ]
         self.view_id = view_id
         self.disable = disable
