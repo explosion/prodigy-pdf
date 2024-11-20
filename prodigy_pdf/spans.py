@@ -1,7 +1,7 @@
 import base64
 from io import BytesIO
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 import pypdfium2 as pdfium
 from docling_core.types.doc.labels import DocItemLabel
@@ -68,8 +68,8 @@ CSS_PREVIEW_FOCUS = """
 
 
 def get_layout_tokens(
-    doc: Span, headings: list[int] = [], disabled: list[int] = []
-) -> list[dict]:
+    doc: Span, headings: List[int] = [], disabled: List[int] = []
+) -> List[dict]:
     result = []
     for i, token in enumerate(doc):
         token_dict = get_token(token, i)
@@ -83,8 +83,8 @@ def get_layout_tokens(
 
 
 def get_special_tokens(
-    doc: Doc, disable: list[str] = []
-) -> tuple[list[int], list[int]]:
+    doc: Doc, disable: List[str] = []
+) -> Tuple[List[int], List[int]]:
     headings = []
     disabled = []
     for span in doc.spans["layout"]:
@@ -96,7 +96,7 @@ def get_special_tokens(
     return headings, disabled
 
 
-def pdf_to_images(path: Path) -> list[str]:
+def pdf_to_images(path: Path) -> List[str]:
     images = []
     pdf = pdfium.PdfDocument(path)
     for page_number in range(len(pdf)):
@@ -114,12 +114,12 @@ class LayoutStream:
         self,
         f: PathInputType,
         nlp: Language,
-        file_ext: list[str] = ["pdf", "docx"],
+        file_ext: List[str] = ["pdf", "docx"],
         view_id: ViewId = "spans_manual",
-        disable: list[str] = [],
+        disable: List[str] = [],
         split_pages: bool = False,
         hide_preview: bool = False,
-        focus: list[DocItemLabel] = [],
+        focus: List[DocItemLabel] = [],
     ) -> None:
         dir_path = ensure_path(f)
         if not dir_path.exists() or not dir_path.is_dir():
