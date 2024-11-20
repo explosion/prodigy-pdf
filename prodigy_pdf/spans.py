@@ -192,17 +192,21 @@ class LayoutStream:
                     if span.label_ not in self.focus:
                         continue
                     span_layout = span._.get(self.layout.attrs.span_layout)
-                    image_span = {
-                        "x": span_layout.x,
-                        "y": span_layout.y,
-                        "width": span_layout.width,
-                        "height": span_layout.height,
-                        "color": "magenta",
-                        "id": span.id,
-                    }
+                    image_spans = []
+                    if span_layout:
+                        image_spans.append(
+                            {
+                                "x": span_layout.x,
+                                "y": span_layout.y,
+                                "width": span_layout.width,
+                                "height": span_layout.height,
+                                "color": "magenta",
+                                "id": span.id,
+                            }
+                        )
                     blocks = [{"view_id": self.view_id}]
                     if not self.hide_preview:
-                        blocks.append({"view_id": "image", "spans": [image_span]})
+                        blocks.append({"view_id": "image", "spans": image_spans})
                     eg = {
                         "text": span.text,
                         "image": images[i],
