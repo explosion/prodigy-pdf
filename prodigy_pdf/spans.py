@@ -6,6 +6,7 @@ from typing import List, Optional, Tuple
 import pypdfium2 as pdfium
 import srsly
 from docling_core.types.doc.labels import DocItemLabel
+from prodigy.components.preprocess import resolve_labels
 from prodigy.components.db import connect
 from prodigy.components.stream import Stream, _source_is_dataset, get_stream
 from prodigy.core import Arg, recipe
@@ -288,6 +289,7 @@ def pdf_spans_manual(
         )
         stream = Stream.from_iterable(layout_stream.get_stream())
     if add_ents:
+         labels = resolve_labels(nlp, "ner", recipe_labels=labels)
         stream.apply(preprocess_ner_stream, nlp, labels=labels, unsegmented=True)
     css = CSS
     if not hide_preview:
