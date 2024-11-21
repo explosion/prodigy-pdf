@@ -7,7 +7,7 @@ import pypdfium2 as pdfium
 import srsly
 from docling_core.types.doc.labels import DocItemLabel
 from prodigy.components.db import connect
-from prodigy.components.preprocess import resolve_labels
+from prodigy.components.preprocess import add_answer, resolve_labels
 from prodigy.components.stream import Stream, _source_is_dataset, get_stream
 from prodigy.core import Arg, recipe
 from prodigy.errors import RecipeError
@@ -351,6 +351,7 @@ def pdf_layout_fetch(
     )
     msg.info("Creating preprocessed PDFs")
     stream = Stream.from_iterable(layout_stream.get_stream())
+    stream.apply(add_answer, stream=stream)
     if _source_is_dataset(output, None):
         dataset = str(output).replace("dataset:", "")
         db = connect()
