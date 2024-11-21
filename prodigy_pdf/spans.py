@@ -5,7 +5,6 @@ from typing import List, Optional, Tuple
 
 import pypdfium2 as pdfium
 from docling_core.types.doc.labels import DocItemLabel
-from prodigy.components.preprocess import get_token
 from prodigy.components.stream import Stream
 from prodigy.core import Arg, recipe
 from prodigy.errors import RecipeError
@@ -71,8 +70,16 @@ def get_layout_tokens(
     doc: Span, headings: List[int] = [], disabled: List[int] = []
 ) -> List[dict]:
     result = []
+    offset = 0
     for i, token in enumerate(doc):
-        token_dict = get_token(token, i)
+        token_dict = {
+            "text": token.text,
+            "start": offset,
+            "end": offset + len(token.text),
+            "id": i,
+            "ws": bool(token.whitespace_),
+        }
+        offset += len(token.text)
         if token.text == SEPARATOR or token.i in disabled:
             token_dict["disabled"] = True
             token_dict["style"] = {"display": "none"}
