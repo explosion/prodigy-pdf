@@ -289,7 +289,7 @@ def pdf_spans_manual(
         )
         stream = Stream.from_iterable(layout_stream.get_stream())
     if add_ents:
-         labels = resolve_labels(nlp, "ner", recipe_labels=labels)
+        labels = resolve_labels(nlp, "ner", recipe_labels=labels)
         stream.apply(preprocess_ner_stream, nlp, labels=labels, unsegmented=True)
     css = CSS
     if not hide_preview:
