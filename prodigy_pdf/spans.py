@@ -4,14 +4,16 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 import pypdfium2 as pdfium
+import srsly
 from docling_core.types.doc.labels import DocItemLabel
-from prodigy.components.stream import Stream
+from prodigy.components.db import connect
+from prodigy.components.stream import Stream, _source_is_dataset, get_stream
 from prodigy.core import Arg, recipe
 from prodigy.errors import RecipeError
 from prodigy.protocols import ControllerComponentsDict
 from prodigy.recipes.ner import preprocess_stream as preprocess_ner_stream
 from prodigy.types import PathInputType, StreamType, ViewId
-from prodigy.util import ensure_path, log, set_hashes
+from prodigy.util import ensure_path, log, msg, set_hashes
 from spacy.language import Language
 from spacy.tokens import Doc, Span
 from spacy_layout import spaCyLayout
@@ -147,9 +149,6 @@ class LayoutStream:
         self.split_pages = split_pages
         self.hide_preview = hide_preview
         self.focus = focus
-        self.css = CSS
-        if not hide_preview:
-            self.css += CSS_PREVIEW_FOCUS if self.focus else CSS_PREVIEW
         self.nlp = nlp
         self.layout = spaCyLayout(nlp, separator=SEPARATOR)
         log("RECIPE: Initialized spacy-layout")
@@ -245,7 +244,7 @@ class LayoutStream:
     # fmt: off
     dataset=Arg(help="Dataset to save annotations to"),
     nlp=Arg(help="Loadable spaCy pipeline"),
-    source=Arg(help="Path to directory to load from"),
+    source=Arg(help="Path to directory of PDFs or dataset/JSONL file created with pdf.spans.fetch"),
     labels=Arg("--label", "-l", help="Comma-separated label(s) to annotate or text file with one label per line"),
     add_ents=Arg("--add-ents", "-E", help="Add named enitites for the given labels via the spaCy model"),
     focus=Arg("--focus", "-f", help="Focus mode: annotate selected sections of a given type, e.g. 'text'"),
@@ -273,19 +272,26 @@ def pdf_spans_manual(
     """
     log("RECIPE: Starting recipe pdf.spans.manual", locals())
     view_id = "spans_manual"
-    layout_stream = LayoutStream(
-        source,
-        nlp=nlp,
-        file_ext=["pdf"],
-        view_id=view_id,
-        disable=disable or [],
-        split_pages=split_pages,
-        hide_preview=hide_preview,
-        focus=focus or [],
-    )
-    stream = Stream.from_iterable(layout_stream.get_stream())
+    if source.endswith(".jsonl") or _source_is_dataset(source, None):
+        # Load from existing data created with pdf.spans.fetch
+        stream = get_stream(source)
+    else:
+        layout_stream = LayoutStream(
+            source,
+            nlp=nlp,
+            file_ext=["pdf"],
+            view_id=view_id,
+            disable=disable or [],
+            split_pages=split_pages,
+            hide_preview=hide_preview,
+            focus=focus or [],
+        )
+        stream = Stream.from_iterable(layout_stream.get_stream())
     if add_ents:
         stream.apply(preprocess_ner_stream, nlp, labels=labels, unsegmented=True)
+    css = CSS
+    if not hide_preview:
+        css += CSS_PREVIEW_FOCUS if focus else CSS_PREVIEW
 
     return {
         "dataset": dataset,
@@ -293,7 +299,7 @@ def pdf_spans_manual(
         "view_id": "pages" if not split_pages and not focus else "blocks",
         "config": {
             "labels": labels,
-            "global_css": layout_stream.css,
+            "global_css": css,
             "shade_bounding_boxes": True,
             "custom_theme": {
                 "cardMaxWidth": "95%",
@@ -302,3 +308,53 @@ def pdf_spans_manual(
             },
         },
     }
+
+
+@recipe(
+    "pdf.spans.fetch",
+    # fmt: off
+    output=Arg(help="Output file or dataset (with prefix dataset:)"),
+    nlp=Arg(help="Loadable spaCy pipeline"),
+    source=Arg(help="Path to directory to load from"),
+    focus=Arg("--focus", "-f", help="Focus mode: annotate selected sections of a given type, e.g. 'text'"),
+    disable=Arg("--disable", "-d", help="Labels of layout spans to disable, e.g. 'footnote'"),
+    hide_preview=Arg("--hide-preview", "-HP", help="Hide side-by-side preview of layout"),
+    split_pages=Arg("--split-pages", "-S", help="View pages as separate tasks"),
+    # fmt: on
+)
+def pdf_spans_fetch(
+    output: str,
+    nlp: Language,
+    source: str,
+    focus: Optional[List[str]] = None,
+    disable: Optional[List[str]] = None,
+    hide_preview: bool = False,
+    split_pages: bool = False,
+) -> ControllerComponentsDict:
+    """
+    Pre-process PDFs to use with pdf.spans.manual. This can significantly speed
+    up loading time during the annotation process.
+    """
+    log("RECIPE: Starting recipe pdf.spans.fetch", locals())
+    layout_stream = LayoutStream(
+        source,
+        nlp=nlp,
+        file_ext=["pdf"],
+        view_id="spans_manual",
+        disable=disable or [],
+        split_pages=split_pages,
+        hide_preview=hide_preview,
+        focus=focus or [],
+    )
+    msg.info("Creating preprocessed PDFs")
+    stream = Stream.from_iterable(layout_stream.get_stream())
+    if _source_is_dataset(output, None):
+        dataset = str(output).replace("dataset:", "")
+        db = connect()
+        if dataset not in db:
+            db.add_dataset(dataset)
+        db.add_examples(stream, datasets=[dataset])
+        msg.good(f"Saved fetched data to dataset {dataset}")
+    else:
+        srsly.write_jsonl(output, stream)
+        msg.good("Saved fetched data to local file", output)
