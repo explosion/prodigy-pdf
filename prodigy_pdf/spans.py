@@ -235,10 +235,10 @@ class LayoutStream:
     source=Arg(help="Path to directory to load from"),
     labels=Arg("--label", "-l", help="Comma-separated label(s) to annotate or text file with one label per line"),
     add_ents=Arg("--add-ents", "-E", help="Add named enitites for the given labels via the spaCy model"),
+    focus=Arg("--focus", "-FX", help="Focus mode: annotate selected sections of a given type, e.g. 'text'"),
     disable=Arg("--disable", "-d", help="Labels of layout spans to disable, e.g. 'footnote'"),
     split_pages=Arg("--split-pages", "-S", help="View pages as separate tasks"),
     hide_preview=Arg("--hide-preview", "-P", help="Hide side-by-side preview of layout"),
-    focus=Arg("--focus", "-FX", help="Focus mode: annotate selected sections of a given type, e.g. 'text'"),
     # fmt: on
 )
 def pdf_spans_manual(
@@ -248,10 +248,16 @@ def pdf_spans_manual(
     labels: List[str] = [],
     add_ents: bool = False,
     focus: List[DocItemLabel] = [],
-    disable: List[str] = [],
+    disable: List[DocItemLabel] = [],
     hide_preview: bool = False,
     split_pages: bool = False,
 ) -> ControllerComponentsDict:
+    """
+    Apply span annotations to text-based document contents extracted with
+    spacy-layout and Docling. For efficiency, the recipe can run with
+    --focus text to walk through individual text blocks, which are highlighted
+    in a visual preview of the document page.
+    """
     log("RECIPE: Starting recipe pdf.spans.manual", locals())
     view_id = "spans_manual"
     layout_stream = LayoutStream(
