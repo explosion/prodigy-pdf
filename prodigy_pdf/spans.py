@@ -1,7 +1,7 @@
 import base64
 from io import BytesIO
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import pypdfium2 as pdfium
 from docling_core.types.doc.labels import DocItemLabel
@@ -119,7 +119,7 @@ class LayoutStream:
         disable: List[str] = [],
         split_pages: bool = False,
         hide_preview: bool = False,
-        focus: List[DocItemLabel] = [],
+        focus: List[str] = [],
     ) -> None:
         dir_path = ensure_path(f)
         if not dir_path.exists() or not dir_path.is_dir():
@@ -245,10 +245,10 @@ def pdf_spans_manual(
     dataset: str,
     nlp: Language,
     source: str,
-    labels: List[str] = [],
+    labels: Optional[List[str]] = None,
     add_ents: bool = False,
-    focus: List[DocItemLabel] = [],
-    disable: List[DocItemLabel] = [],
+    focus: Optional[List[str]] = None,
+    disable: Optional[List[str]] = None,
     hide_preview: bool = False,
     split_pages: bool = False,
 ) -> ControllerComponentsDict:
@@ -265,10 +265,10 @@ def pdf_spans_manual(
         nlp=nlp,
         file_ext=["pdf", "docx"],
         view_id=view_id,
-        disable=disable,
+        disable=disable or [],
         split_pages=split_pages,
         hide_preview=hide_preview,
-        focus=focus,
+        focus=focus or [],
     )
     stream = Stream.from_iterable(layout_stream.get_stream())
     if add_ents:
