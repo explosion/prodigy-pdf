@@ -63,6 +63,10 @@ CSS_PREVIEW_FOCUS = """
     position: sticky;
     top: 0;
 }
+
+.prodigy-container .prodigy-meta {
+    grid-column: 1 / span 3;
+}
 """
 
 
@@ -183,9 +187,10 @@ class LayoutStream:
                 }
                 pages.append(page)
                 if self.split_pages:
-                    yield set_hashes(page)
+                    meta = {"title": file_path.stem, "page": page_layout.page_no}
+                    yield set_hashes({**page, "meta": meta})
             if not self.split_pages:
-                yield set_hashes({"pages": pages})
+                yield set_hashes({"pages": pages, "meta": {"title": file_path.stem}})
 
     def get_focus_stream(self) -> StreamType:
         for file_path in self.paths:
@@ -230,6 +235,7 @@ class LayoutStream:
                             "text": span.text,
                             "label": span.label_,
                         },
+                        "meta": {"title": file_path.stem, "page": page_layout.page_no},
                     }
                     yield set_hashes(eg)
 
