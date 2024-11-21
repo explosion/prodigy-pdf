@@ -114,7 +114,7 @@ class LayoutStream:
         self,
         f: PathInputType,
         nlp: Language,
-        file_ext: List[str] = ["pdf", "docx"],
+        file_ext: List[str] = ["pdf"],
         view_id: ViewId = "spans_manual",
         disable: List[str] = [],
         split_pages: bool = False,
@@ -263,7 +263,7 @@ def pdf_spans_manual(
     layout_stream = LayoutStream(
         source,
         nlp=nlp,
-        file_ext=["pdf", "docx"],
+        file_ext=["pdf"],
         view_id=view_id,
         disable=disable or [],
         split_pages=split_pages,
