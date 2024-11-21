@@ -244,7 +244,7 @@ class LayoutStream:
     # fmt: off
     dataset=Arg(help="Dataset to save annotations to"),
     nlp=Arg(help="Loadable spaCy pipeline"),
-    source=Arg(help="Path to directory of PDFs or dataset/JSONL file created with pdf.spans.fetch"),
+    source=Arg(help="Path to directory of PDFs or dataset/JSONL file created with pdf.layout.fetch"),
     labels=Arg("--label", "-l", help="Comma-separated label(s) to annotate or text file with one label per line"),
     add_ents=Arg("--add-ents", "-E", help="Add named enitites for the given labels via the spaCy model"),
     focus=Arg("--focus", "-f", help="Focus mode: annotate selected sections of a given type, e.g. 'text'"),
@@ -273,7 +273,7 @@ def pdf_spans_manual(
     log("RECIPE: Starting recipe pdf.spans.manual", locals())
     view_id = "spans_manual"
     if source.endswith(".jsonl") or _source_is_dataset(source, None):
-        # Load from existing data created with pdf.spans.fetch
+        # Load from existing data created with pdf.layout.fetch
         stream = get_stream(source)
     else:
         layout_stream = LayoutStream(
@@ -311,7 +311,7 @@ def pdf_spans_manual(
 
 
 @recipe(
-    "pdf.spans.fetch",
+    "pdf.layout.fetch",
     # fmt: off
     output=Arg(help="Output file or dataset (with prefix dataset:)"),
     nlp=Arg(help="Loadable spaCy pipeline"),
@@ -322,7 +322,7 @@ def pdf_spans_manual(
     split_pages=Arg("--split-pages", "-S", help="View pages as separate tasks"),
     # fmt: on
 )
-def pdf_spans_fetch(
+def pdf_layout_fetch(
     output: str,
     nlp: Language,
     source: str,
@@ -335,7 +335,7 @@ def pdf_spans_fetch(
     Pre-process PDFs to use with pdf.spans.manual. This can significantly speed
     up loading time during the annotation process.
     """
-    log("RECIPE: Starting recipe pdf.spans.fetch", locals())
+    log("RECIPE: Starting recipe pdf.layout.fetch", locals())
     layout_stream = LayoutStream(
         source,
         nlp=nlp,
