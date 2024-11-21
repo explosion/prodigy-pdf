@@ -235,10 +235,10 @@ class LayoutStream:
     source=Arg(help="Path to directory to load from"),
     labels=Arg("--label", "-l", help="Comma-separated label(s) to annotate or text file with one label per line"),
     add_ents=Arg("--add-ents", "-E", help="Add named enitites for the given labels via the spaCy model"),
-    focus=Arg("--focus", "-FX", help="Focus mode: annotate selected sections of a given type, e.g. 'text'"),
+    focus=Arg("--focus", "-f", help="Focus mode: annotate selected sections of a given type, e.g. 'text'"),
     disable=Arg("--disable", "-d", help="Labels of layout spans to disable, e.g. 'footnote'"),
     split_pages=Arg("--split-pages", "-S", help="View pages as separate tasks"),
-    hide_preview=Arg("--hide-preview", "-P", help="Hide side-by-side preview of layout"),
+    hide_preview=Arg("--hide-preview", "-HP", help="Hide side-by-side preview of layout"),
     # fmt: on
 )
 def pdf_spans_manual(
