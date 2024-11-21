@@ -288,6 +288,7 @@ def pdf_spans_manual(
             hide_preview=hide_preview,
             focus=focus or [],
         )
+
         stream = Stream.from_iterable(layout_stream.get_stream())
     if add_ents:
         labels = resolve_labels(nlp, "ner", recipe_labels=labels)
@@ -350,8 +351,7 @@ def pdf_layout_fetch(
         focus=focus or [],
     )
     msg.info("Creating preprocessed PDFs")
-    stream = Stream.from_iterable(layout_stream.get_stream())
-    stream.apply(add_answer, stream=stream)
+    stream = Stream.from_iterable(add_answer(layout_stream.get_stream()))
     if _source_is_dataset(output, None):
         dataset = str(output).replace("dataset:", "")
         db = connect()
