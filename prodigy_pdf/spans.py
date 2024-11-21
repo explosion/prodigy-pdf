@@ -6,8 +6,8 @@ from typing import List, Optional, Tuple
 import pypdfium2 as pdfium
 import srsly
 from docling_core.types.doc.labels import DocItemLabel
-from prodigy.components.preprocess import resolve_labels
 from prodigy.components.db import connect
+from prodigy.components.preprocess import resolve_labels
 from prodigy.components.stream import Stream, _source_is_dataset, get_stream
 from prodigy.core import Arg, recipe
 from prodigy.errors import RecipeError
@@ -166,7 +166,7 @@ class LayoutStream:
             blocks.append({"view_id": "image", "spans": []})
         for file_path in self.paths:
             doc = self.layout(file_path)
-            images = pdf_to_images(file_path)
+            images = pdf_to_images(file_path) if not self.hide_preview else None
             pages = []
             for i, (page_layout, page_spans) in enumerate(
                 doc._.get(self.layout.attrs.doc_pages)
@@ -174,7 +174,6 @@ class LayoutStream:
                 headings, disabled = get_special_tokens(doc, disable=self.disable)
                 page = {
                     "text": SEPARATOR.join(span.text for span in page_spans),
-                    "image": images[i],
                     "tokens": get_layout_tokens(
                         doc[page_spans[0].start : page_spans[-1].end],
                         headings=headings,
@@ -185,6 +184,8 @@ class LayoutStream:
                     "view_id": "blocks",
                     "config": {"blocks": blocks},
                 }
+                if not self.hide_preview and images:
+                    page["image"] = images[i]
                 pages.append(page)
                 if self.split_pages:
                     meta = {"title": file_path.stem, "page": page_layout.page_no}
@@ -203,21 +204,21 @@ class LayoutStream:
                 for span in page_spans:
                     if span.label_ not in self.focus:
                         continue
-                    span_layout = span._.get(self.layout.attrs.span_layout)
-                    image_spans = []
-                    if span_layout:
-                        image_spans.append(
-                            {
-                                "x": span_layout.x,
-                                "y": span_layout.y,
-                                "width": span_layout.width,
-                                "height": span_layout.height,
-                                "color": "magenta",
-                                "id": span.id,
-                            }
-                        )
                     blocks = [{"view_id": self.view_id}]
                     if not self.hide_preview:
+                        span_layout = span._.get(self.layout.attrs.span_layout)
+                        image_spans = []
+                        if span_layout:
+                            image_spans.append(
+                                {
+                                    "x": span_layout.x,
+                                    "y": span_layout.y,
+                                    "width": span_layout.width,
+                                    "height": span_layout.height,
+                                    "color": "magenta",
+                                    "id": span.id,
+                                }
+                            )
                         blocks.append({"view_id": "image", "spans": image_spans})
                     eg = {
                         "text": span.text,
