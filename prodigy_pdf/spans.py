@@ -33,7 +33,7 @@ CSS_PREVIEW = """
 }
 
 .prodigy-page-content > div:nth-child(1) {
-    border-right: 1px solid #ccc;
+    border-right: 1px solid #ddd;
 }
 
 .prodigy-page-content > div:nth-child(2) {
@@ -52,7 +52,7 @@ CSS_PREVIEW_FOCUS = """
 }
 
 .prodigy-container > div:nth-child(2) {
-    border-right: 1px solid #ccc;
+    border-right: 1px solid #ddd;
 }
 
 .prodigy-container > div:nth-child(3) {
