@@ -324,7 +324,8 @@ def pdf_layout_fetch(
         focus=focus or [],
     )
     msg.info("Creating preprocessed PDFs")
-    stream = Stream.from_iterable(add_answer(layout_stream.get_stream()))
+    layout_stream = add_answer(layout_stream.get_stream())
+    stream = Stream.from_iterable(layout_stream)
     if _source_is_dataset(output, None):
         dataset = str(output).replace("dataset:", "")
         db = connect()
