@@ -1,7 +1,7 @@
 import base64
 from io import BytesIO
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import pypdfium2 as pdfium
 import srsly
@@ -24,90 +24,49 @@ SEPARATOR = "\n\n"
 
 FONT_SIZE_TEXT = 14
 FONT_SIZE_HEADING = 18
-CSS = """
-.prodigy-content {
-    text-align: left;
-}
-"""
-CSS_PREVIEW = """
-.prodigy-page-content {
-    display: grid;
-    grid-template-columns: 1fr 50%;
-}
-
-.prodigy-page-content > div:nth-child(1) {
-    border-right: 1px solid #ddd;
-}
-
-.prodigy-page-content > div:nth-child(2) {
-    position: relative;
-}
-
-.prodigy-page-content > div:nth-child(2) > div:first-child {
-    position: sticky;
-    top: 0;
-}
-"""
-CSS_PREVIEW_FOCUS = """
-.prodigy-container {
-    display: grid;
-    grid-template-columns: 0 1fr 50%;
-}
-
-.prodigy-container > div:nth-child(2) {
-    border-right: 1px solid #ddd;
-}
-
-.prodigy-container > div:nth-child(3) {
-    position: relative;
-}
-
-.prodigy-container > div:nth-child(3) > div:first-child {
-    position: sticky;
-    top: 0;
-}
-
-.prodigy-container .prodigy-meta {
-    grid-column: 1 / span 3;
-}
+CSS_CLS = ".prodigy-annotator:not(:has(.prodigy-page-content)) .prodigy-container"
+CSS_CLS_PAGES = ".prodigy-annotator:has(.prodigy-page-content) .prodigy-page-content"
+CSS = ".prodigy-content { text-align: left }"
+CSS_PREVIEW = f"""
+{CSS_CLS}, {CSS_CLS_PAGES} {{ display: grid }}
+{CSS_CLS} {{ grid-template-columns: 0 1fr 50% }}
+{CSS_CLS_PAGES} {{ grid-template-columns: 1fr 50%; }}
+{CSS_CLS} > div:nth-child(2), {CSS_CLS_PAGES} > div:nth-child(1) {{ border-right: 1px solid #ddd }}
+{CSS_CLS} > div:nth-child(3), {CSS_CLS_PAGES} > div:nth-child(3) {{ position: relative }}
+{CSS_CLS} > div:nth-child(3) > div:first-child, {CSS_CLS_PAGES} > div:nth-child(2) > div:first-child {{ position: sticky; top: 0 }}
+{CSS_CLS} .prodigy-meta {{ grid-column: 1 / span 3 }}
 """
 
 
-def get_layout_tokens(
-    doc: Span, headings: List[int] = [], disabled: List[int] = []
-) -> List[dict]:
+def get_layout_tokens(doc: Span, token_labels: Dict[int, str]) -> List[dict]:
     result = []
     offset = 0
     for i, token in enumerate(doc):
+        token_label = token_labels.get(token.i)
         token_dict = {
             "text": token.text,
             "start": offset,
             "end": offset + len(token.text),
             "id": i,
             "ws": bool(token.whitespace_),
+            "layout": token_label,
         }
         offset += len(token.text)
-        if token.text == SEPARATOR or token.i in disabled:
+        if token.text == SEPARATOR:
             token_dict["disabled"] = True
             token_dict["style"] = {"display": "none"}
-        if token.i in headings:
+        if token_label in HEADINGS:
             token_dict["style"] = {"fontWeight": "bold", "fontSize": FONT_SIZE_HEADING}
         result.append(token_dict)
     return result
 
 
-def get_special_tokens(
-    doc: Doc, disable: List[str] = []
-) -> Tuple[List[int], List[int]]:
-    headings = []
-    disabled = []
+def get_token_labels(doc: Doc) -> Dict[int, str]:
+    labels_by_id = {}
     for span in doc.spans["layout"]:
-        idxs = range(span.start, span.end)
-        if span.label_ in HEADINGS:
-            headings.extend(idxs)
-        if span.label_ in disable:
-            disabled.extend(idxs)
-    return headings, disabled
+        for i in range(span.start, span.end):
+            labels_by_id[i] = span.label_
+    return labels_by_id
 
 
 def pdf_to_images(path: Path) -> List[str]:
@@ -123,6 +82,24 @@ def pdf_to_images(path: Path) -> List[str]:
     return images
 
 
+def disable_tokens(stream: StreamType, disabled: List[str]) -> StreamType:
+    for eg in stream:
+        for token in eg.get("tokens", []):
+            if token.get("layout") in disabled:
+                token["disabled"] = True
+        yield eg
+
+
+def remove_preview(stream: StreamType, view_id: ViewId) -> StreamType:
+    for eg in stream:
+        config = eg.get("config", {})
+        if "blocks" in config:
+            eg["config"]["blocks"] = [{"view_id": view_id}]
+        if "image" in eg:
+            del eg["image"]
+        yield eg
+
+
 class LayoutStream:
     def __init__(
         self,
@@ -130,7 +107,6 @@ class LayoutStream:
         nlp: Language,
         file_ext: List[str] = ["pdf"],
         view_id: ViewId = "spans_manual",
-        disable: List[str] = [],
         split_pages: bool = False,
         hide_preview: bool = False,
         focus: List[str] = [],
@@ -146,7 +122,6 @@ class LayoutStream:
             and (path.suffix.lower()[1:] in file_ext)
         ]
         self.view_id = view_id
-        self.disable = disable
         self.split_pages = split_pages
         self.hide_preview = hide_preview
         self.focus = focus
@@ -171,13 +146,12 @@ class LayoutStream:
             for i, (page_layout, page_spans) in enumerate(
                 doc._.get(self.layout.attrs.doc_pages)
             ):
-                headings, disabled = get_special_tokens(doc, disable=self.disable)
+                token_labels = get_token_labels(doc)
                 page = {
                     "text": SEPARATOR.join(span.text for span in page_spans),
                     "tokens": get_layout_tokens(
                         doc[page_spans[0].start : page_spans[-1].end],
-                        headings=headings,
-                        disabled=disabled,
+                        token_labels,
                     ),
                     "width": page_layout.width,
                     "height": page_layout.height,
@@ -196,11 +170,11 @@ class LayoutStream:
     def get_focus_stream(self) -> StreamType:
         for file_path in self.paths:
             doc = self.layout(file_path)
-            images = pdf_to_images(file_path)
+            images = pdf_to_images(file_path) if not self.hide_preview else None
             for i, (page_layout, page_spans) in enumerate(
                 doc._.get(self.layout.attrs.doc_pages)
             ):
-                _, disabled = get_special_tokens(doc, disable=self.disable)
+                token_labels = get_token_labels(doc)
                 for span in page_spans:
                     if span.label_ not in self.focus:
                         continue
@@ -222,8 +196,7 @@ class LayoutStream:
                         blocks.append({"view_id": "image", "spans": image_spans})
                     eg = {
                         "text": span.text,
-                        "image": images[i],
-                        "tokens": get_layout_tokens(span, disabled=disabled),
+                        "tokens": get_layout_tokens(span, token_labels),
                         "width": page_layout.width,
                         "height": page_layout.height,
                         "view_id": "blocks",
@@ -238,6 +211,8 @@ class LayoutStream:
                         },
                         "meta": {"title": file_path.stem, "page": page_layout.page_no},
                     }
+                    if not self.hide_preview and images:
+                        eg["image"] = images[i]
                     yield set_hashes(eg)
 
 
@@ -283,7 +258,6 @@ def pdf_spans_manual(
             nlp=nlp,
             file_ext=["pdf"],
             view_id=view_id,
-            disable=disable or [],
             split_pages=split_pages,
             hide_preview=hide_preview,
             focus=focus or [],
@@ -292,9 +266,13 @@ def pdf_spans_manual(
     if add_ents:
         labels = resolve_labels(nlp, "ner", recipe_labels=labels)
         stream.apply(preprocess_ner_stream, nlp, labels=labels, unsegmented=True)
+    if disable:
+        stream.apply(disable_tokens, disabled=disable)
     css = CSS
-    if not hide_preview:
-        css += CSS_PREVIEW_FOCUS if focus else CSS_PREVIEW
+    if hide_preview:
+        stream.apply(remove_preview, view_id=view_id)
+    else:
+        css += CSS_PREVIEW
 
     return {
         "dataset": dataset,
@@ -320,8 +298,6 @@ def pdf_spans_manual(
     nlp=Arg(help="Loadable spaCy pipeline"),
     source=Arg(help="Path to directory to load from"),
     focus=Arg("--focus", "-f", help="Focus mode: annotate selected sections of a given type, e.g. 'text'"),
-    disable=Arg("--disable", "-d", help="Labels of layout spans to disable, e.g. 'footnote'"),
-    hide_preview=Arg("--hide-preview", "-HP", help="Hide side-by-side preview of layout"),
     split_pages=Arg("--split-pages", "-S", help="View pages as separate tasks"),
     # fmt: on
 )
@@ -330,8 +306,6 @@ def pdf_layout_fetch(
     nlp: Language,
     source: str,
     focus: Optional[List[str]] = None,
-    disable: Optional[List[str]] = None,
-    hide_preview: bool = False,
     split_pages: bool = False,
 ) -> ControllerComponentsDict:
     """
@@ -344,9 +318,8 @@ def pdf_layout_fetch(
         nlp=nlp,
         file_ext=["pdf"],
         view_id="spans_manual",
-        disable=disable or [],
         split_pages=split_pages,
-        hide_preview=hide_preview,
+        hide_preview=False,
         focus=focus or [],
     )
     msg.info("Creating preprocessed PDFs")
