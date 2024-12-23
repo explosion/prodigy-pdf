@@ -79,8 +79,10 @@ def pdf_to_images(path: Path) -> List[str]:
             pil_image.save(buffered, format="JPEG")
             img_str = base64.b64encode(buffered.getvalue())
         images.append(f"data:image/png;base64,{img_str.decode('utf-8')}")
-    return images
-
+    try:
+     return images
+    finally:
+        pdf.close()
 
 def disable_tokens(stream: StreamType, disabled: List[str]) -> StreamType:
     for eg in stream:
