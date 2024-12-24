@@ -149,12 +149,15 @@ class LayoutStream:
                 doc._.get(self.layout.attrs.doc_pages)
             ):
                 token_labels = get_token_labels(doc)
-                page = {
-                    "text": SEPARATOR.join(span.text for span in page_spans),
-                    "tokens": get_layout_tokens(
+                tokens = []
+                if page_spans:
+                    tokens = get_layout_tokens(
                         doc[page_spans[0].start : page_spans[-1].end],
                         token_labels,
-                    ),
+                    )
+                page = {
+                    "text": SEPARATOR.join(span.text for span in page_spans),
+                    "tokens": tokens,
                     "width": page_layout.width,
                     "height": page_layout.height,
                     "view_id": "blocks",
