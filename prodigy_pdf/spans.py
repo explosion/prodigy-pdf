@@ -1,19 +1,19 @@
 import base64
 from io import BytesIO
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 import pypdfium2 as pdfium
 import srsly
 from docling_core.types.doc.labels import DocItemLabel
 from prodigy.components.db import connect
-from prodigy.components.preprocess import add_answer, resolve_labels
+from prodigy.components.preprocess import add_answer, get_token, resolve_labels
 from prodigy.components.stream import Stream, _source_is_dataset, get_stream
 from prodigy.core import Arg, recipe
 from prodigy.errors import RecipeError
 from prodigy.protocols import ControllerComponentsDict
 from prodigy.recipes.ner import preprocess_stream as preprocess_ner_stream
-from prodigy.types import PathInputType, StreamType, ViewId
+from prodigy.types import PathInputType, StreamType, TaskType, ViewId
 from prodigy.util import ensure_path, log, msg, set_hashes
 from spacy.language import Language
 from spacy.tokens import Doc, Span
@@ -110,6 +110,7 @@ class LayoutStream:
         split_pages: bool = False,
         hide_preview: bool = False,
         focus: List[str] = [],
+        clickable: bool = False,
     ) -> None:
         dir_path = ensure_path(f)
         if not dir_path.exists() or not dir_path.is_dir():
@@ -125,13 +126,17 @@ class LayoutStream:
         self.split_pages = split_pages
         self.hide_preview = hide_preview
         self.focus = focus
+        self.clickable = clickable
         self.nlp = nlp
         self.layout = spaCyLayout(nlp, separator=SEPARATOR)
         log("RECIPE: Initialized spacy-layout")
 
     def get_stream(self) -> StreamType:
         if self.focus:
-            yield from self.get_focus_stream()
+            if self.clickable:
+                yield from self.get_selectable_stream()
+            else:
+                yield from self.get_focus_stream()
         else:
             yield from self.get_full_stream()
 
@@ -215,6 +220,75 @@ class LayoutStream:
                         eg["image"] = images[i]
                     yield set_hashes(eg)
 
+    def get_selectable_stream(self) -> StreamType:
+        for file_path in self.paths:
+            doc = self.layout(file_path)
+            images = pdf_to_images(file_path) if not self.hide_preview else None
+            for i, (page_layout, page_spans) in enumerate(
+                doc._.get(self.layout.attrs.doc_pages)
+            ):
+                # token_labels = get_token_labels(doc)
+                image_spans = []
+                for j, span in enumerate(page_spans):
+                    if span.label_ not in self.focus:
+                        continue
+                    span_layout = span._.get(self.layout.attrs.span_layout)
+                    if span_layout:
+                        image_spans.append(
+                            {
+                                "x": span_layout.x,
+                                "y": span_layout.y,
+                                "width": span_layout.width,
+                                "height": span_layout.height,
+                                "color": "magenta",
+                                "shade": j == 0,
+                                "id": span.id,
+                                "text": span.text,
+                                "tokens": [
+                                    get_token(token, i) for i, token in enumerate(span)
+                                ],
+                                "spans": [],
+                                "text_span": {
+                                    "token_start": span.start,
+                                    "token_end": span.end - 1,
+                                    "start": span.start_char,
+                                    "end": span.end_char,
+                                    "text": span.text,
+                                    "label": span.label_,
+                                },
+                            }
+                        )
+                if image_spans and images:
+                    span = image_spans[0]
+                    blocks = [
+                        {"view_id": self.view_id},
+                        {"view_id": "image", "spans": image_spans},
+                    ]
+                    eg = {
+                        "text": span["text"],
+                        "tokens": span["tokens"],
+                        "width": page_layout.width,
+                        "height": page_layout.height,
+                        "view_id": "blocks",
+                        "config": {"blocks": blocks},
+                        "image": images[i],
+                        "layout_span_id": span["id"],
+                        "all_spans": {},
+                        "meta": {
+                            "title": file_path.stem,
+                            "page": page_layout.page_no,
+                        },
+                        # This is where the final resulting full example is stored
+                        "result": {
+                            "text": SEPARATOR.join(span.text for span in page_spans),
+                            "tokens": get_layout_tokens(
+                                doc[page_spans[0].start : page_spans[-1].end], {}
+                            ),
+                            "spans": [],
+                        },
+                    }
+                    yield set_hashes(eg)
+
 
 @recipe(
     "pdf.spans.manual",
@@ -225,6 +299,7 @@ class LayoutStream:
     labels=Arg("--label", "-l", help="Comma-separated label(s) to annotate or text file with one label per line"),
     add_ents=Arg("--add-ents", "-E", help="Add named enitites for the given labels via the spaCy model"),
     focus=Arg("--focus", "-f", help="Focus mode: annotate selected sections of a given type, e.g. 'text'"),
+    clickable=Arg("--clickable", "-C", help="Allow clicking on bounding boxes to select them, used in combination with --focus"),
     disable=Arg("--disable", "-d", help="Labels of layout spans to disable, e.g. 'footnote'"),
     split_pages=Arg("--split-pages", "-S", help="View pages as separate tasks"),
     hide_preview=Arg("--hide-preview", "-HP", help="Hide side-by-side preview of layout"),
@@ -237,6 +312,7 @@ def pdf_spans_manual(
     labels: Optional[List[str]] = None,
     add_ents: bool = False,
     focus: Optional[List[str]] = None,
+    clickable: bool = False,
     disable: Optional[List[str]] = None,
     hide_preview: bool = False,
     split_pages: bool = False,
@@ -261,6 +337,7 @@ def pdf_spans_manual(
             split_pages=split_pages,
             hide_preview=hide_preview,
             focus=focus or [],
+            clickable=clickable,
         )
 
         stream = Stream.from_iterable(layout_stream.get_stream())
@@ -275,14 +352,53 @@ def pdf_spans_manual(
     else:
         css += CSS_PREVIEW
 
+    def handle_click_bounding_box(ctrl, *, eg: TaskType, span: dict) -> TaskType:
+        """If enabled, select text from clicked bounding box."""
+        for image_span in eg["config"]["blocks"][-1]["spans"]:
+            # Highlight the currently selected bounding box
+            image_span["shade"] = image_span["id"] == span["id"]
+        return {
+            "text": span["text"],
+            "tokens": span["tokens"],
+            "spans": eg["all_spans"].get(str(span["id"]), []),
+            "config": eg["config"],
+            "layout_span_id": span["id"],
+        }
+
+    def handle_update_spans(ctrl, *, eg: TaskType, spans: List[dict]) -> TaskType:
+        """If spans are added, store them in a global key on the task."""
+        current_id = eg["layout_span_id"]
+        eg["spans"] = spans
+        eg["all_spans"][str(current_id)] = spans
+        # Align tokens indices of span to full document using start/end
+        tokens_by_start = {
+            token["start"]: token["id"] for token in eg["result"]["tokens"]
+        }
+        tokens_by_end = {token["end"]: token["id"] for token in eg["result"]["tokens"]}
+        result_spans = []
+        for spans_by_section in eg["all_spans"].values():
+            for span in spans_by_section:
+                span = dict(span)
+                span["token_start"] = tokens_by_start[span["start"]]
+                span["token_end"] = tokens_by_end[span["end"]]
+                result_spans.append(span)
+        eg["result"]["spans"] = result_spans
+        return eg
+
+    event_hooks = {
+        "click_bounding_box": handle_click_bounding_box,
+        "update_spans": handle_update_spans,
+    }
+
     return {
         "dataset": dataset,
         "stream": stream,
         "view_id": "pages" if not split_pages and not focus else "blocks",
+        "event_hooks": event_hooks if clickable else {},
         "config": {
             "labels": labels,
             "global_css": css,
-            "shade_bounding_boxes": True,
+            "shade_bounding_boxes": False if clickable else True,
             "custom_theme": {
                 "cardMaxWidth": "95%",
                 "smallText": FONT_SIZE_TEXT,
