@@ -172,7 +172,7 @@ def _validate_ocr_example(stream):
     dataset=("Dataset to save answers to", "positional", None, str),
     source=("Source with PDF Annotations", "positional", None, str),
     labels=("Labels to consider", "option", "l", split_string),
-    lang=("Language for OCR", "option", "lang", str),
+    lang=("Language for OCR", "option", "la", str),
     scale=("Zoom scale. Increase above 3 to upscale the image for OCR.", "option", "s", int),
     remove_base64=("Remove base64-encoded image data", "flag", "R", bool),
     fold_dashes=("Removes dashes at the end of a textline and folds them with the next term.", "flag", "f", bool),
