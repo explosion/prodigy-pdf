@@ -172,6 +172,7 @@ def _validate_ocr_example(stream):
     dataset=("Dataset to save answers to", "positional", None, str),
     source=("Source with PDF Annotations", "positional", None, str),
     labels=("Labels to consider", "option", "l", split_string),
+    lang=("Language for OCR", "option", "la", str),
     scale=("Zoom scale. Increase above 3 to upscale the image for OCR.", "option", "s", int),
     remove_base64=("Remove base64-encoded image data", "flag", "R", bool),
     fold_dashes=("Removes dashes at the end of a textline and folds them with the next term.", "flag", "f", bool),
@@ -182,6 +183,7 @@ def pdf_ocr_correct(
     dataset: str,
     source: str,
     labels: str,
+    lang: str = "eng",
     scale: int = 3,
     remove_base64: bool = False,
     fold_dashes: bool = False,
@@ -190,7 +192,7 @@ def pdf_ocr_correct(
     """Applies OCR to annotated segments and gives a textbox for corrections."""
     stream = get_stream(source)
 
-    def new_stream(stream):
+    def new_stream(stream, lang):
         for ex in stream:
             useful_spans = [
                 span for span in ex.get("spans", []) if span["label"] in labels
@@ -205,7 +207,7 @@ def pdf_ocr_correct(
                     pil_page, span=annot, scale=scale
                 )
                 annot["image"] = img_str
-                annot["text"] = pytesseract.image_to_string(cropped)
+                annot["text"] = pytesseract.image_to_string(cropped, lang=lang)
                 if fold_dashes:
                     annot["text"] = fold_ocr_dashes(annot["text"])
                 annot["transcription"] = annot["text"]
@@ -233,7 +235,7 @@ def pdf_ocr_correct(
 
     blocks = [{"view_id": "classification"}, {"view_id": "text_input"}]
     stream.apply(_validate_ocr_example)
-    stream.apply(new_stream)
+    stream.apply(new_stream, lang)
 
     return {
         "dataset": dataset,
